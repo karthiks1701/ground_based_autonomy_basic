@@ -13,6 +13,7 @@
 #include <nav_msgs/Path.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TwistStamped.h>
+#include <geometry_msgs/Twist.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Joy.h>
@@ -90,6 +91,7 @@ int pathPointID = 0;
 bool pathInit = false;
 bool navFwd = true;
 double switchTime = 0;
+int Mode = 1;
 
 nav_msgs::Path path;
 
@@ -125,6 +127,7 @@ void pathHandler(const nav_msgs::Path::ConstPtr& pathIn)
     path.poses[i].pose.position.x = pathIn->poses[i].pose.position.x;
     path.poses[i].pose.position.y = pathIn->poses[i].pose.position.y;
     path.poses[i].pose.position.z = pathIn->poses[i].pose.position.z;
+    //ROS_INFO("POSES %f ",path.poses[i].pose.position.x);
   }
 
   vehicleXRec = vehicleX;
@@ -141,24 +144,35 @@ void pathHandler(const nav_msgs::Path::ConstPtr& pathIn)
 void joystickHandler(const sensor_msgs::Joy::ConstPtr& joy)
 {
   joyTime = ros::Time::now().toSec();
-
-  joySpeedRaw = sqrt(joy->axes[3] * joy->axes[3] + joy->axes[4] * joy->axes[4]);
+  
+  joySpeedRaw = sqrt(joy->axes[3] * joy->axes[3] + joy->axes[1] * joy->axes[1]);
   joySpeed = joySpeedRaw;
-  if (joySpeed > 1.0) joySpeed = 1.0;
-  if (joy->axes[4] == 0) joySpeed = 0;
+
+  // if (joy->buttons[3] == 1){
+  // Mode = Mode*-1;
+  // } 
+  
+  // if (Mode == -1){
+  // joySpeed = 0;
+  // }
+
+  
+  if (joySpeed > 1.0 ) joySpeed = 1.0;
+  if (joy->axes[1] == 0) joySpeed = 0;
   joyYaw = joy->axes[3];
   if (joySpeed == 0 && noRotAtStop) joyYaw = 0;
 
-  if (joy->axes[4] < 0 && !twoWayDrive) {
+  if (joy->axes[1] < 0 && !twoWayDrive) {
     joySpeed = 0;
     joyYaw = 0;
   }
 
-  if (joy->axes[2] > -0.1) {
-    autonomyMode = false;
-  } else {
-    autonomyMode = true;
-  }
+  
+  // if (joy->buttons[1] == 1 && Mode == 1) {
+  //   autonomyMode = false;
+  // } else {
+  //   autonomyMode = true;
+  // }
 }
 
 void speedHandler(const std_msgs::Float32::ConstPtr& speed)
@@ -213,7 +227,7 @@ int main(int argc, char** argv)
   nhPrivate.getParam("autonomySpeed", autonomySpeed);
   nhPrivate.getParam("joyToSpeedDelay", joyToSpeedDelay);
 
-  ros::Subscriber subOdom = nh.subscribe<nav_msgs::Odometry> ("/state_estimation", 5, odomHandler);
+  ros::Subscriber subOdom = nh.subscribe<nav_msgs::Odometry> ("/r2/t265/odom/sample", 5, odomHandler);
 
   ros::Subscriber subPath = nh.subscribe<nav_msgs::Path> ("/path", 5, pathHandler);
 
@@ -223,9 +237,9 @@ int main(int argc, char** argv)
 
   ros::Subscriber subStop = nh.subscribe<std_msgs::Int8> ("/stop", 5, stopHandler);
 
-  ros::Publisher pubSpeed = nh.advertise<geometry_msgs::TwistStamped> ("/cmd_vel", 5);
-  geometry_msgs::TwistStamped cmd_vel;
-  cmd_vel.header.frame_id = "vehicle";
+  ros::Publisher pubSpeed = nh.advertise<geometry_msgs::Twist> ("/cmd_vel", 5);
+  geometry_msgs::Twist cmd_vel;
+  //cmd_vel.header.frame_id = "/r2/os_sensor";
 
   if (autonomyMode) {
     joySpeed = autonomySpeed / maxSpeed;
@@ -283,14 +297,15 @@ int main(int argc, char** argv)
           switchTime = time;
         }
       }
-
+      //ROS_INFO("dis 0 %f %f", disX, disY);
       float joySpeed2 = maxSpeed * joySpeed;
       if (!navFwd) {
         dirDiff += PI;
         if (dirDiff > PI) dirDiff -= 2 * PI;
         joySpeed2 *= -1;
       }
-
+      //ROS_INFO("value 0 %f", vehicleSpeed); 
+      
       if (fabs(vehicleSpeed) < 2.0 * maxAccel / 100.0) vehicleYawRate = -stopYawRateGain * dirDiff;
       else vehicleYawRate = -yawRateGain * dirDiff;
 
@@ -310,9 +325,12 @@ int main(int argc, char** argv)
       }
 
       float joySpeed3 = joySpeed2;
+      //ROS_INFO("joyspeed2 %f", joySpeed2);
+      
       if (odomTime < slowInitTime + slowTime1 && slowInitTime > 0) joySpeed3 *= slowRate1;
       else if (odomTime < slowInitTime + slowTime1 + slowTime2 && slowInitTime > 0) joySpeed3 *= slowRate2;
-
+      
+      //ROS_INFO("joyspeed3 %f", joySpeed3);
       if (fabs(dirDiff) < dirDiffThre && dis > stopDisThre) {
         if (vehicleSpeed < joySpeed3) vehicleSpeed += maxAccel / 100.0;
         else if (vehicleSpeed > joySpeed3) vehicleSpeed -= maxAccel / 100.0;
@@ -320,21 +338,21 @@ int main(int argc, char** argv)
         if (vehicleSpeed > 0) vehicleSpeed -= maxAccel / 100.0;
         else if (vehicleSpeed < 0) vehicleSpeed += maxAccel / 100.0;
       }
-
+      //ROS_INFO("value 1 %f", vehicleSpeed); 
       if (odomTime < stopInitTime + stopTime && stopInitTime > 0) {
         vehicleSpeed = 0;
         vehicleYawRate = 0;
       }
-
+      //ROS_INFO("value 2 %f", vehicleSpeed); 
       if (safetyStop >= 1) vehicleSpeed = 0;
       if (safetyStop >= 2) vehicleYawRate = 0;
-
+      //ROS_INFO("value 3 %f", vehicleSpeed); 
       pubSkipCount--;
       if (pubSkipCount < 0) {
-        cmd_vel.header.stamp = ros::Time().fromSec(odomTime);
-        if (fabs(vehicleSpeed) <= maxAccel / 100.0) cmd_vel.twist.linear.x = 0;
-        else cmd_vel.twist.linear.x = vehicleSpeed;
-        cmd_vel.twist.angular.z = vehicleYawRate;
+        //cmd_vel.header.stamp = ros::Time().fromSec(odomTime);
+        if (fabs(vehicleSpeed) <= maxAccel / 100.0) cmd_vel.linear.x = 0;
+        else cmd_vel.linear.x = vehicleSpeed;
+        cmd_vel.angular.z = vehicleYawRate;
         pubSpeed.publish(cmd_vel);
 
         pubSkipCount = pubSkipNum;

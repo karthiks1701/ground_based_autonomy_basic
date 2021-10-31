@@ -1,12 +1,16 @@
 <launch>
   <!-- assumes ds4drv is running -->
-  <node name="joy_node" pkg="joy" type="joy_node">
-    <remap from="joy" to="joy_orig"/>
+  <include file="$(find ds4_driver)/launch/ds4_driver.launch" >
+        <arg name="addr" value="" />
+        <arg name="use_standard_msgs" value="true" />
+    </include>
+  <!-- <node name="joy_node" pkg="joy" type="joy_node">
+  <remap from="joy" to="joy"/>
   </node>
-  <!-- remap joy to emulate ps3joy mappings -->
-  <node name="joy_remap" pkg="joy" type="joy_remap.py">
-    <remap from="joy_in" to="joy_orig"/>
+  < remap joy to emulate ps3joy mappings--> 
+  <!-- <node name="joy_remap" pkg="joy" type="joy_remap.py">
+    <remap from="joy_in" to="joy"/>
     <remap from="joy_out" to="joy"/>
-    <rosparam command="load" file="$(find joy)/config/ps4joy.yaml"/>
-  </node>
+    <rosparam command="load" file="$(find joy)/config/ps4joy.yaml"/> -->
+  </node> 
 </launch>

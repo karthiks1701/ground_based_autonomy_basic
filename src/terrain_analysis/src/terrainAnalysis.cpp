@@ -46,7 +46,7 @@ int minDyObsPointNum = 1;
 bool noDataObstacle = false;
 int noDataBlockSkipNum = 0;
 int minBlockPointNum = 10;
-double vehicleHeight = 1.5;
+double vehicleHeight = 0.3;
 int voxelPointUpdateThre = 100;
 double voxelTimeUpdateThre = 2.0;
 double minRelZ = -1.5;
@@ -571,7 +571,7 @@ int main(int argc, char** argv)
       sensor_msgs::PointCloud2 terrainCloud2;
       pcl::toROSMsg(*terrainCloudElev, terrainCloud2);
       terrainCloud2.header.stamp = ros::Time().fromSec(laserCloudTime);
-      terrainCloud2.header.frame_id = "map";
+      terrainCloud2.header.frame_id = "/r2/map";
       pubLaserCloud.publish(terrainCloud2);
     }
 

@@ -1,13 +1,18 @@
 <launch>
+  <arg name="robot_id" default="2"/>
+  <include file="$(find local_planner)/launch/local_planner.launch"/>
 
-  <include file="$(find local_planner)/launch/local_planner.launch" />
 
   <!--include file="$(find waypoint_example)/launch/waypoint_example.launch" /-->
-
-  <include file="$(find vehicle_simulator)/launch/vehicle_simulator.launch" />
-
+  <!-- <include file="$(find vehicle_simulator)/launch/vehicle_simulator.launch" /> -->
   <!--include file="$(find loam_interface)/launch/loam_interface.launch" /-->
-
-  <node launch-prefix="nice" pkg="rviz" type="rviz" name="rvizGA" args="-d $(find vehicle_simulator)/rviz/vehicle_simulator.rviz" respawn="true"/>
+  <node pkg="tf" type="static_transform_publisher" name="tf_lidar" args="-0.23 0 0.3 0 0 0 /r$(arg robot_id)/t265_link /r$(arg robot_id)/os_sensor 10" />
+  <node pkg="tf" type="static_transform_publisher" name="tf_robot_frame" args="-0.23 0 0 0 0 0 /r$(arg robot_id)/t265_odom_frame /r$(arg robot_id)/robot_frame 10" />  -->
+  <!-- <node pkg="tf" type="static_transform_publisher" name="map_frame" args="-0.1975 0 0 0 0 0 /map /r$(arg robot_id)/t265_odom_frame 10" /> -->
+  <node pkg="tf" type="static_transform_publisher" name="tf_map_frame" args="0 0 0 0 0 0 /r$(arg robot_id)/map /r$(arg robot_id)/t265_odom_frame 10" /> -->
+  <!-- <node pkg="tf" type="static_transform_publisher" name="vehicleTransPublisher" args="-0.1975 0 0.2 0 0 0 /sensor_at_scan /vehicle 10000"/>   -->
+  <include file="$(find rover)/launch/rs_t265_tx2.launch" /> 
+  <include file='$(find terrain_analysis)/launch/terrain_analysis.launch' />
+  <!-- <node launch-prefix="nice" pkg="rviz" type="rviz" name="rvizGA" args="-d $(find vehicle_simulator)/rviz/vehicle_simulator.rviz" respawn="true"/> -->
 
 </launch>
