@@ -35,10 +35,12 @@ const double PI = 3.1415926;
 #define PLOTPATHSET 1
 
 string pathFolder;
+string frame = "LOCAL";
 double vehicleLength = 0.5;
 double vehicleWidth = 0.4;
 double sensorOffsetX = 0;
 double sensorOffsetY = 0;
+double senorLidarHeight = 0.25;
 bool twoWayDrive = true;
 double laserVoxelSize = 0.05;
 double terrainVoxelSize = 0.2;
@@ -261,7 +263,7 @@ void joystickHandler(const sensor_msgs::Joy::ConstPtr& joy)
     autonomyMode = false;
   } 
    
-  ROS_INFO("autonomyMode %d ", autonomyMode);
+  // ROS_INFO("autonomyMode %d ", autonomyMode);
 
   
 
@@ -532,11 +534,13 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "localPlanner");
   ros::NodeHandle nh;
   ros::NodeHandle nhPrivate = ros::NodeHandle("~");
+  nhPrivate.getParam("frame", Frame);
   nhPrivate.getParam("pathFolder", pathFolder);
   nhPrivate.getParam("vehicleLength", vehicleLength);
   nhPrivate.getParam("vehicleWidth", vehicleWidth);
   nhPrivate.getParam("sensorOffsetX", sensorOffsetX);
   nhPrivate.getParam("sensorOffsetY", sensorOffsetY);
+  nhPrivate.getParam("sensorLidarHeight", senorLidarHeight;
   nhPrivate.getParam("twoWayDrive", twoWayDrive);
   nhPrivate.getParam("laserVoxelSize", laserVoxelSize);
   nhPrivate.getParam("terrainVoxelSize", terrainVoxelSize);
@@ -687,18 +691,22 @@ int main(int argc, char** argv)
       plannerCloudCrop->clear();
       int plannerCloudSize = plannerCloud->points.size();
       for (int i = 0; i < plannerCloudSize; i++) {
-        //float pointX1 = plannerCloud->points[i].x - vehicleX;
-        //float pointY1 = plannerCloud->points[i].y - vehicleY;
-        //float pointZ1 = plannerCloud->points[i].z - vehicleZ;
+        if (frame == "GLOBAL"){
+        float pointX1 = plannerCloud->points[i].x - vehicleX;
+        float pointY1 = plannerCloud->points[i].y - vehicleY;
+        float pointZ1 = plannerCloud->points[i].z - vehicleZ;
 
-        //point.x = pointX1 * cosVehicleYaw + pointY1 * sinVehicleYaw;
-        //point.y = -pointX1 * sinVehicleYaw + pointY1 * cosVehicleYaw;
+        point.x = pointX1 * cosVehicleYaw + pointY1 * sinVehicleYaw;
+        point.y = -pointX1 * sinVehicleYaw + pointY1 * cosVehicleYaw;
+        }
+        else if(frame == "LOCAL"){
          float pointX1 = plannerCloud->points[i].x;
          float pointY1 = plannerCloud->points[i].y;
-         float pointZ1 = plannerCloud->points[i].z+0.25;
+         float pointZ1 = plannerCloud->points[i].z+senorLidarHeight;
 
          point.x = pointX1;
          point.y = pointY1;
+        }
 
 
 
@@ -713,10 +721,26 @@ int main(int argc, char** argv)
 
       int boundaryCloudSize = boundaryCloud->points.size();
       for (int i = 0; i < boundaryCloudSize; i++) {
+        
+        if (frame=="GLOBAL"){
+        
         point.x = ((boundaryCloud->points[i].x - vehicleX) * cosVehicleYaw 
                 + (boundaryCloud->points[i].y - vehicleY) * sinVehicleYaw);
         point.y = (-(boundaryCloud->points[i].x - vehicleX) * sinVehicleYaw 
                 + (boundaryCloud->points[i].y - vehicleY) * cosVehicleYaw);
+        
+        }
+
+        else if (frame=="LOCAL"){
+
+        point.x = boundaryCloud->points[i].x; 
+        point.y = boundaryCloud->points[i].y;  
+
+        }
+        
+        
+        
+        
         point.z = boundaryCloud->points[i].z;
         point.intensity = boundaryCloud->points[i].intensity;
 
@@ -728,10 +752,19 @@ int main(int argc, char** argv)
 
       int addedObstaclesSize = addedObstacles->points.size();
       for (int i = 0; i < addedObstaclesSize; i++) {
+        
+        if(frame=="GLOBAL"){
         point.x = ((addedObstacles->points[i].x - vehicleX) * cosVehicleYaw 
                 + (addedObstacles->points[i].y - vehicleY) * sinVehicleYaw);
         point.y = (-(addedObstacles->points[i].x - vehicleX) * sinVehicleYaw 
                 + (addedObstacles->points[i].y - vehicleY) * cosVehicleYaw);
+        }
+        
+        else if (frame=="LOCAL"){
+        point.x = addedObstacles->points[i].x;
+        point.y = addedObstacles->points[i].y;  
+        }
+
         point.z = addedObstacles->points[i].z;
         point.intensity = addedObstacles->points[i].intensity;
 

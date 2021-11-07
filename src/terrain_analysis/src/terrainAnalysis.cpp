@@ -108,6 +108,7 @@ void odometryHandler(const nav_msgs::Odometry::ConstPtr& odom)
   vehicleRoll = roll;
   vehiclePitch = pitch;
   vehicleYaw = yaw;
+  
   vehicleX = odom->pose.pose.position.x;
   vehicleY = odom->pose.pose.position.y;
   vehicleZ = odom->pose.pose.position.z;
@@ -571,7 +572,7 @@ int main(int argc, char** argv)
       sensor_msgs::PointCloud2 terrainCloud2;
       pcl::toROSMsg(*terrainCloudElev, terrainCloud2);
       terrainCloud2.header.stamp = ros::Time().fromSec(laserCloudTime);
-      terrainCloud2.header.frame_id = "/r2/map";
+      terrainCloud2.header.frame_id = "vehicle";
       pubLaserCloud.publish(terrainCloud2);
     }
 
