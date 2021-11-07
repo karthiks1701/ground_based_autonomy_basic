@@ -1,6 +1,6 @@
 <launch>
 
-  <include file="$(find ps3joy)/launch/ps3.launch" />
+  <!-- <include file="$(find ps3joy)/launch/ps3.launch" /> -->
   <include file="$(find ds4_driver)/launch/ds4_driver.launch" >
         <arg name="addr" value="" />
         <arg name="use_standard_msgs" value="true" />
@@ -10,35 +10,35 @@
 
   <!--include file="$(find terrain_analysis)/launch/terrain_analysis.launch" /-->
 
-  <arg name="sensorOffsetX" default="0.23"/>
+  <arg name="sensorOffsetX" default="0.2"/>
   <arg name="sensorOffsetY" default="0"/>
   <arg name="twoWayDrive" default="true"/>
   <arg name="maxSpeed" default="0.2"/>
   <arg name="autonomyMode" default="false"/>
-  <arg name="autonomySpeed" default="1.0"/>
+  <arg name="autonomySpeed" default="0.2"/>
   <arg name="joyToSpeedDelay" default="2.0"/>
 
   <node pkg="local_planner" type="localPlanner" name="localPlanner" output="screen" required="true">
     <param name="pathFolder" type="string" value="$(find local_planner)/paths" />
-    <param name="vehicleLength" type="double" value="0.55" />
-    <param name="vehicleWidth" type="double" value="0.45" />
+    <param name="vehicleLength" type="double" value="0.40" />
+    <param name="vehicleWidth" type="double" value="0.35" />
     <param name="sensorOffsetX" value="$(arg sensorOffsetX)" />
     <param name="sensorOffsetY" value="$(arg sensorOffsetY)" />
     <param name="twoWayDrive" value="$(arg twoWayDrive)" />
     <param name="laserVoxelSize" type="double" value="0.05" />
     <param name="terrainVoxelSize" type="double" value="0.2" />
-    <param name="useTerrainAnalysis" type="bool" value="true" />
+    <param name="useTerrainAnalysis" type="bool" value="false" />
     <param name="checkObstacle" type="bool" value="true" />
     <param name="checkRotObstacle" type="bool" value="false" />
-    <param name="adjacentRange" type="double" value="1" />
+    <param name="adjacentRange" type="double" value="3.5" />
     <param name="obstacleHeightThre" type="double" value="0.15" />
     <param name="groundHeightThre" type="double" value="0.1" />
     <param name="costHeightThre" type="double" value="0.1" />
     <param name="costScore" type="double" value="0.02" />
     <param name="useCost" type="bool" value="false" />
     <param name="pointPerPathThre" type="int" value="10" />
-    <param name="minRelZ" type="double" value="-0.40" />
-    <param name="maxRelZ" type="double" value="0.25" />
+    <param name="minRelZ" type="double" value="-0.15" />
+    <param name="maxRelZ" type="double" value="0.60" />
     <param name="maxSpeed" value="$(arg maxSpeed)" />
     <param name="dirWeight" type="double" value="0.02" />
     <param name="dirThre" type="double" value="90.0" />
@@ -59,8 +59,8 @@
     <param name="goalX" type="double" value="0" />
     <param name="goalY" type="double" value="0" />
 
-    <remap from="/state_estimation" to="/r2/t265/odom/sample"/>
-    <remap from="/registered_scan" to="/r2/os_cloud_node/points"/>
+    <!-- <remap from="/state_estimation" to="/r2/t265/odom/sample"/>
+    <remap from="/registered_scan" to="/r2/os_cloud_node/points"/> -->
   </node>
 
   <node pkg="local_planner" type="pathFollower" name="pathFollower" output="screen" required="true">
@@ -92,9 +92,9 @@
     <param name="autonomyMode" value="$(arg autonomyMode)" />
     <param name="autonomySpeed" value="$(arg autonomySpeed)" />
     <param name="joyToSpeedDelay" value="$(arg joyToSpeedDelay)" />
-    
-    <remap from="/state_estimation" to="/r2/t265/odom/sample"/>
-    <remap from="/registered_scan" to="/r2/os_cloud_node/points"/>
+    <!--<remap from="/cmd_vel" to="/cmd_vel_dummy"/>-->
+    <!-- <remap from="/state_estimation" to="/r2/t265/odom/sample"/>
+    <remap from="/registered_scan" to="/r2/os_cloud_node/points"/> -->
 
   </node>
 

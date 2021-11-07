@@ -141,6 +141,8 @@ void odometryHandler(const nav_msgs::Odometry::ConstPtr& odom)
   vehicleX = odom->pose.pose.position.x - cos(yaw) * sensorOffsetX + sin(yaw) * sensorOffsetY;
   vehicleY = odom->pose.pose.position.y - sin(yaw) * sensorOffsetX - cos(yaw) * sensorOffsetY;
   vehicleZ = odom->pose.pose.position.z; //vehicle height from the base to the lidar(code expects as it is)
+  // ROS_INFO("Vehicle POS x=%f y=%f z=%f", vehicleX, vehicleY, vehicleZ);
+
 }
 
 void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloud2)
@@ -230,7 +232,7 @@ void joystickHandler(const sensor_msgs::Joy::ConstPtr& joy)
   // ROS_INFO("joySpeed %f %f ", joy->axes[1], joy->axes[3]);int Mode = 1;
   // ROS_INFO("joySpeed %f %f ", joy->axes[1], joy->axes[3]);
   
-  joySpeedRaw = sqrt(joy->axes[3] * joy->axes[3] + joy->axes[1] * joy->axes[1]);
+  joySpeedRaw = sqrt(joy->axes[1] * joy->axes[1] + joy->axes[3] * joy->axes[3]);
   joySpeed = joySpeedRaw;
   
 
@@ -251,11 +253,17 @@ void joystickHandler(const sensor_msgs::Joy::ConstPtr& joy)
   
   
   
-  // if (joy->buttons[1] == 1) {
-  //   autonomyMode = false;
-  // } else {
-  //   autonomyMode = true;
-  // }
+  if ((joy->buttons[1] == 1) && (autonomyMode == false)) {
+    autonomyMode = true;
+  } 
+
+  if ((joy->buttons[0] == 1) && (autonomyMode == true)) {
+    autonomyMode = false;
+  } 
+   
+  ROS_INFO("autonomyMode %d ", autonomyMode);
+
+  
 
   // if (joy->buttons[2] == 1) {
   //   checkObstacle = true;
@@ -679,12 +687,21 @@ int main(int argc, char** argv)
       plannerCloudCrop->clear();
       int plannerCloudSize = plannerCloud->points.size();
       for (int i = 0; i < plannerCloudSize; i++) {
-        float pointX1 = plannerCloud->points[i].x - vehicleX;
-        float pointY1 = plannerCloud->points[i].y - vehicleY;
-        float pointZ1 = plannerCloud->points[i].z - vehicleZ;
+        //float pointX1 = plannerCloud->points[i].x - vehicleX;
+        //float pointY1 = plannerCloud->points[i].y - vehicleY;
+        //float pointZ1 = plannerCloud->points[i].z - vehicleZ;
 
-        point.x = pointX1 * cosVehicleYaw + pointY1 * sinVehicleYaw;
-        point.y = -pointX1 * sinVehicleYaw + pointY1 * cosVehicleYaw;
+        //point.x = pointX1 * cosVehicleYaw + pointY1 * sinVehicleYaw;
+        //point.y = -pointX1 * sinVehicleYaw + pointY1 * cosVehicleYaw;
+         float pointX1 = plannerCloud->points[i].x;
+         float pointY1 = plannerCloud->points[i].y;
+         float pointZ1 = plannerCloud->points[i].z+0.25;
+
+         point.x = pointX1;
+         point.y = pointY1;
+
+
+
         point.z = pointZ1;
         point.intensity = plannerCloud->points[i].intensity;
 
@@ -898,7 +915,7 @@ int main(int argc, char** argv)
           }
 
           path.header.stamp = ros::Time().fromSec(odomTime);
-          path.header.frame_id = "/r2/robot_frame";
+          path.header.frame_id = "vehicle";
           pubPath.publish(path);
 
           #if PLOTPATHSET == 1
@@ -944,7 +961,7 @@ int main(int argc, char** argv)
           sensor_msgs::PointCloud2 freePaths2;
           pcl::toROSMsg(*freePaths, freePaths2);
           freePaths2.header.stamp = ros::Time().fromSec(odomTime);
-          freePaths2.header.frame_id = "/r2/robot_frame";
+          freePaths2.header.frame_id = "vehicle";
           pubFreePaths.publish(freePaths2);
           #endif
         }
@@ -970,7 +987,7 @@ int main(int argc, char** argv)
         path.poses[0].pose.position.z = 0;
 
         path.header.stamp = ros::Time().fromSec(odomTime);
-        path.header.frame_id = "/r2/robot_frame";
+        path.header.frame_id = "vehicle";
         pubPath.publish(path);
 
         #if PLOTPATHSET == 1
@@ -978,7 +995,7 @@ int main(int argc, char** argv)
         sensor_msgs::PointCloud2 freePaths2;
         pcl::toROSMsg(*freePaths, freePaths2);
         freePaths2.header.stamp = ros::Time().fromSec(odomTime);
-        freePaths2.header.frame_id ="/r2/robot_frame";
+        freePaths2.header.frame_id ="vehicle";
         pubFreePaths.publish(freePaths2);
         #endif
       }
@@ -986,13 +1003,13 @@ int main(int argc, char** argv)
       sensor_msgs::PointCloud2 plannerCloud2;
       pcl::toROSMsg(*plannerCloud, plannerCloud2);
       plannerCloud2.header.stamp = ros::Time().fromSec(odomTime);
-      plannerCloud2.header.frame_id = "/r2/robot_frame";
+      plannerCloud2.header.frame_id = "vehicle";
       pubLaserCloud.publish(plannerCloud2);
       
       sensor_msgs::PointCloud2 plannerCloud3;
       pcl::toROSMsg(*plannerCloudCrop, plannerCloud3);
       plannerCloud3.header.stamp = ros::Time().fromSec(odomTime);
-      plannerCloud3.header.frame_id = "/r2/robot_frame";
+      plannerCloud3.header.frame_id = "vehicle";
       pubLaserCloudcrop.publish(plannerCloud3);
     
     

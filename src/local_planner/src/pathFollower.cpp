@@ -145,21 +145,34 @@ void joystickHandler(const sensor_msgs::Joy::ConstPtr& joy)
 {
   joyTime = ros::Time::now().toSec();
   
-  joySpeedRaw = sqrt(joy->axes[3] * joy->axes[3] + joy->axes[1] * joy->axes[1]);
+  joySpeedRaw = sqrt(joy->axes[1] * joy->axes[1] + joy->axes[3] * joy->axes[3]);
   joySpeed = joySpeedRaw;
 
-  // if (joy->buttons[3] == 1){
+  if ((joy->buttons[3] == 1) && (safetyStop == 0)){
+  safetyStop = 1;
   // Mode = Mode*-1;
   // } 
   
   // if (Mode == -1){
   // joySpeed = 0;
   // }
+  }
 
+  if ((joy->buttons[2] == 1) && (safetyStop == 1)){
+  safetyStop = 0;
+  // Mode = Mode*-1;
+  // } 
   
+  // if (Mode == -1){
+  // joySpeed = 0;
+  // }
+  }
+
+
+  joyYaw = joy->axes[3];
   if (joySpeed > 1.0 ) joySpeed = 1.0;
   if (joy->axes[1] == 0) joySpeed = 0;
-  joyYaw = joy->axes[3];
+  
   if (joySpeed == 0 && noRotAtStop) joyYaw = 0;
 
   if (joy->axes[1] < 0 && !twoWayDrive) {
@@ -168,11 +181,14 @@ void joystickHandler(const sensor_msgs::Joy::ConstPtr& joy)
   }
 
   
-  // if (joy->buttons[1] == 1 && Mode == 1) {
-  //   autonomyMode = false;
-  // } else {
-  //   autonomyMode = true;
-  // }
+  
+  if ((joy->buttons[1] == 1) && (autonomyMode == false)) {
+    autonomyMode = true;
+  } 
+
+  if ((joy->buttons[0] == 1) && (autonomyMode == true)) {
+    autonomyMode = false;
+  } 
 }
 
 void speedHandler(const std_msgs::Float32::ConstPtr& speed)
@@ -227,7 +243,7 @@ int main(int argc, char** argv)
   nhPrivate.getParam("autonomySpeed", autonomySpeed);
   nhPrivate.getParam("joyToSpeedDelay", joyToSpeedDelay);
 
-  ros::Subscriber subOdom = nh.subscribe<nav_msgs::Odometry> ("/r2/t265/odom/sample", 5, odomHandler);
+  ros::Subscriber subOdom = nh.subscribe<nav_msgs::Odometry> ("/state_estimation", 5, odomHandler);
 
   ros::Subscriber subPath = nh.subscribe<nav_msgs::Path> ("/path", 5, pathHandler);
 
@@ -344,8 +360,11 @@ int main(int argc, char** argv)
         vehicleYawRate = 0;
       }
       //ROS_INFO("value 2 %f", vehicleSpeed); 
-      if (safetyStop >= 1) vehicleSpeed = 0;
-      if (safetyStop >= 2) vehicleYawRate = 0;
+      if (safetyStop >= 1) 
+      {
+        vehicleSpeed = 0;
+        vehicleYawRate = 0;
+      }
       //ROS_INFO("value 3 %f", vehicleSpeed); 
       pubSkipCount--;
       if (pubSkipCount < 0) {
