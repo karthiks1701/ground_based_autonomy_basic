@@ -26,9 +26,10 @@
     <param name="minRelZ" type="double" value="-1.5" />
     <param name="maxRelZ" type="double" value="0.2" />
     <param name="disRatioZ" type="double" value="0.2" />
+    <param name="frame" type="srting" value="LOCAL" />
 
-    <remap from="/state_estimation" to="/r2/t265/odom/sample"/>
-    <remap from="/registered_scan" to="/r2/os_cloud_node/points"/> 
+    <!-- <remap from="/state_estimation" to="/r2/t265/odom/sample"/>
+    <remap from="/registered_scan" to="/r2/os_cloud_node/points"/>  -->
 
   </node>
 

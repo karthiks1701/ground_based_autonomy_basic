@@ -27,6 +27,7 @@ using namespace std;
 
 const double PI = 3.1415926;
 
+string frame="LOCAL";
 string stateEstimationTopic = "/integrated_to_init";
 string registeredScanTopic = "/velodyne_cloud_registered";
 bool flipStateEstimation = true;
@@ -102,7 +103,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn)
   sensor_msgs::PointCloud2 laserCloud2;
   pcl::toROSMsg(*laserCloud, laserCloud2);
   laserCloud2.header.stamp = laserCloudIn->header.stamp;
-  //laserCloud2.header.frame_id = "map";
+  if (frame=="GLOBAL"){laserCloud2.header.frame_id = "map";}
   pubLaserCloudPointer->publish(laserCloud2);
 }
 
@@ -117,6 +118,7 @@ int main(int argc, char** argv)
   nhPrivate.getParam("flipStateEstimation", flipStateEstimation);
   nhPrivate.getParam("flipRegisteredScan", flipRegisteredScan);
   nhPrivate.getParam("sendTF", sendTF);
+  nhPrivate.getParam("frame",frame);
   nhPrivate.getParam("reverseTF", reverseTF);
 
   ros::Subscriber subOdometry = nh.subscribe<nav_msgs::Odometry> (stateEstimationTopic, 5, odometryHandler);
