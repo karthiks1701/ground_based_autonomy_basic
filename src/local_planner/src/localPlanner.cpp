@@ -534,13 +534,13 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "localPlanner");
   ros::NodeHandle nh;
   ros::NodeHandle nhPrivate = ros::NodeHandle("~");
-  nhPrivate.getParam("frame", Frame);
+  nhPrivate.getParam("frame", frame);
   nhPrivate.getParam("pathFolder", pathFolder);
   nhPrivate.getParam("vehicleLength", vehicleLength);
   nhPrivate.getParam("vehicleWidth", vehicleWidth);
   nhPrivate.getParam("sensorOffsetX", sensorOffsetX);
   nhPrivate.getParam("sensorOffsetY", sensorOffsetY);
-  nhPrivate.getParam("sensorLidarHeight", senorLidarHeight;
+  nhPrivate.getParam("sensorLidarHeight", senorLidarHeight);
   nhPrivate.getParam("twoWayDrive", twoWayDrive);
   nhPrivate.getParam("laserVoxelSize", laserVoxelSize);
   nhPrivate.getParam("terrainVoxelSize", terrainVoxelSize);
@@ -698,6 +698,7 @@ int main(int argc, char** argv)
 
         point.x = pointX1 * cosVehicleYaw + pointY1 * sinVehicleYaw;
         point.y = -pointX1 * sinVehicleYaw + pointY1 * cosVehicleYaw;
+        point.z = pointZ1;
         }
         else if(frame == "LOCAL"){
          float pointX1 = plannerCloud->points[i].x;
@@ -706,11 +707,12 @@ int main(int argc, char** argv)
 
          point.x = pointX1;
          point.y = pointY1;
+         point.z = pointZ1;
         }
 
 
 
-        point.z = pointZ1;
+        
         point.intensity = plannerCloud->points[i].intensity;
 
         float dis = sqrt(point.x * point.x + point.y * point.y);

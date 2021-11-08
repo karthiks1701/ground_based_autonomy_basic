@@ -2,8 +2,18 @@
   <arg name="robot_id" default="2"/>
   <arg name="frame" default="LOCAL"/>
   
-  <include file="$(find local_planner)/launch/local_planner.launch"/>
+  <include file="$(find local_planner)/launch/local_planner.launch">
+   <arg name="frame"  value="$(arg frame)"/>
+  </include>
 
+  <include file="$(find rover)/launch/rs_t265_tx2.launch" > 
+    <arg name="robot_id" value="$(arg robot_id)"/>
+  </include>  
+  
+  
+  <include file="$(find rover)/launch/rover_driver.launch" > 
+    <arg name="robot_id" value="$(arg robot_id)"/>
+  </include>
 
   <!--include file="$(find waypoint_example)/launch/waypoint_example.launch" /-->
   <!-- <include file="$(find vehicle_simulator)/launch/vehicle_simulator.launch" /> -->
@@ -13,10 +23,12 @@
   <!-- <node pkg="tf" type="static_transform_publisher" name="map_frame" args="-0.1975 0 0 0 0 0 /map /r$(arg robot_id)/t265_odom_frame 10" />  -->
   <node pkg="tf" type="static_transform_publisher" name="tf_map_frame" args="0 0 0 0 0 0 /map /r$(arg robot_id)/t265_odom_frame 10" />
   <!-- <node pkg="tf" type="static_transform_publisher" name="vehicleTransPublisher" args="-0.1975 0 0.2 0 0 0 /sensor_at_scan /vehicle 10000"/>    -->
-  <include file="$(find rover)/launch/rs_t265_tx2.launch" /> 
+  
   <!-- <include file='$(find terrain_analysis)/launch/terrain_analysis.launch' /> -->
   <include file="$(find loam_interface)/launch/loam_interface.launch" >
-    <arg name="frame" type="srting" value="$(arg frame)" />
+    <arg name="stateEstimationTopic" value="/r$(arg robot_id)/t265/odom/sample"/>
+    <arg name="registeredScanTopic" value="/r$(arg robot_id)/os_cloud_node/points" />
+    <arg name="frame"  value="$(arg frame)" />
   </include>
   
   <!-- <node launch-prefix="nice" pkg="rviz" type="rviz" name="rvizGA" args="-d $(find vehicle_simulator)/rviz/vehicle_simulator.rviz" respawn="true"/>  -->
