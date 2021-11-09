@@ -189,6 +189,16 @@ void joystickHandler(const sensor_msgs::Joy::ConstPtr& joy)
   if ((joy->buttons[0] == 1) && (autonomyMode == true)) {
     autonomyMode = false;
   } 
+
+  // if ((joy->buttons[6] == 1) && (checkObstacle == false)) {
+  //   checkObstacle = true;
+  // } 
+
+  // if ((joy->buttons[4] == 1) && (checkObstacle == true)) {
+  //   checkObstacle = false;
+  // } 
+
+
 }
 
 void speedHandler(const std_msgs::Float32::ConstPtr& speed)

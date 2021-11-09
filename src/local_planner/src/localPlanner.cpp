@@ -164,8 +164,13 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloud2)
       float pointX = point.x;
       float pointY = point.y;
       float pointZ = point.z;
+      
+      float dis;
+      if (frame == "GLOBAL"){
+      dis = sqrt((pointX - vehicleX) * (pointX - vehicleX) + (pointY - vehicleY) * (pointY - vehicleY));}
 
-      float dis = sqrt((pointX - vehicleX) * (pointX - vehicleX) + (pointY - vehicleY) * (pointY - vehicleY));
+      else if (frame == "LOCAL"){
+      dis = sqrt((pointX*pointX) + (pointY * pointY));}  
       //if(i<5){
       // ROS_INFO(" %i %i %f dis",i ,laserCloudSize,  dis); 
       //}
@@ -208,8 +213,15 @@ void terrainCloudHandler(const sensor_msgs::PointCloud2ConstPtr& terrainCloud2)
       float pointX = point.x;
       float pointY = point.y;
       float pointZ = point.z;
+      
+      float dis;
+      if (frame == "GLOBAL"){
+      dis = sqrt((pointX - vehicleX) * (pointX - vehicleX) + (pointY - vehicleY) * (pointY - vehicleY));}
 
-      float dis = sqrt((pointX - vehicleX) * (pointX - vehicleX) + (pointY - vehicleY) * (pointY - vehicleY));
+      
+      if (frame == "LOCAL"){
+      dis = sqrt((pointX*pointX) + (pointY * pointY));}  
+    
       if ((dis < adjacentRange) && (point.intensity > obstacleHeightThre || useCost) && (dis > 0.25) ) {   //added min distance as well
         point.x = pointX;
         point.y = pointY;
@@ -264,7 +276,13 @@ void joystickHandler(const sensor_msgs::Joy::ConstPtr& joy)
   } 
    
   // ROS_INFO("autonomyMode %d ", autonomyMode);
+  if ((joy->buttons[6] == 1) && (checkObstacle == false)) {
+    checkObstacle = true;
+  } 
 
+  if ((joy->buttons[4] == 1) && (checkObstacle == true)) {
+    checkObstacle = false;
+  } 
   
 
   // if (joy->buttons[2] == 1) {

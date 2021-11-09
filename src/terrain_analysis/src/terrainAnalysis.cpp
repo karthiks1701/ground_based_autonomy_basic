@@ -26,6 +26,7 @@ using namespace std;
 
 const double PI = 3.1415926;
 
+string frame ="LOCAL";
 double scanVoxelSize = 0.05;
 double decayTime = 2.0;
 double noDecayDis = 4.0;
@@ -145,19 +146,30 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloud2)
   pcl::fromROSMsg(*laserCloud2, *laserCloud);
 
   pcl::PointXYZI point;
+
   laserCloudCrop->clear();
   int laserCloudSize = laserCloud->points.size();
   for (int i = 0; i < laserCloudSize; i++) {
     point = laserCloud->points[i];
-
+    float dis;
+    float relZ;
     float pointX = point.x;
     float pointY = point.y;
     float pointZ = point.z;
+    
 
-    float dis = sqrt((pointX - vehicleX) * (pointX - vehicleX) 
-              + (pointY - vehicleY) * (pointY - vehicleY));
-    if (pointZ - vehicleZ > minRelZ - disRatioZ * dis && 
-        pointZ - vehicleZ < maxRelZ + disRatioZ * dis && 
+    if (frame == "GLOBAL"){
+      dis = sqrt((pointX - vehicleX) * (pointX - vehicleX) + (pointY - vehicleY) * (pointY - vehicleY));
+      relZ = pointZ - vehicleZ;
+    }
+
+    if (frame == "LOCAL"){
+      dis = sqrt((pointX*pointX) + (pointY*pointY));
+      relZ = pointZ;
+    }
+    
+    if (relZ > minRelZ - disRatioZ * dis && 
+        relZ < maxRelZ + disRatioZ * dis && 
         dis < terrainVoxelSize * (terrainVoxelHalfWidth + 1)) {
       point.x = pointX;
       point.y = pointY;
@@ -192,7 +204,7 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "terrainAnalysis");
   ros::NodeHandle nh;
   ros::NodeHandle nhPrivate = ros::NodeHandle("~");
-
+  nhPrivate.getParam("frame",frame);
   nhPrivate.getParam("scanVoxelSize", scanVoxelSize);
   nhPrivate.getParam("decayTime", decayTime);
   nhPrivate.getParam("noDecayDis", noDecayDis);
@@ -309,15 +321,27 @@ int main(int argc, char** argv)
 
       // stack registered laser scans
       pcl::PointXYZI point;
+      
       int laserCloudCropSize = laserCloudCrop->points.size();
       for (int i = 0; i < laserCloudCropSize; i++) {
         point = laserCloudCrop->points[i];
+        float relX,relY;
+        if (frame == "GLOBAL"){
+          // dis = sqrt((pointX - vehicleX) * (pointX - vehicleX) + (pointY - vehicleY) * (pointY - vehicleY));
+          relX = point.x - vehicleX;
+          relY = point.y - vehicleY;
+        }
 
-        int indX = int((point.x - vehicleX + terrainVoxelSize / 2) / terrainVoxelSize) + terrainVoxelHalfWidth;
-        int indY = int((point.y - vehicleY + terrainVoxelSize / 2) / terrainVoxelSize) + terrainVoxelHalfWidth;
+        else if (frame == "LOCAL"){
+          relX = point.x;
+          relY = point.y;
+        }
+     
+        int indX = int((relX + terrainVoxelSize / 2) / terrainVoxelSize) + terrainVoxelHalfWidth;
+        int indY = int((relY + terrainVoxelSize / 2) / terrainVoxelSize) + terrainVoxelHalfWidth;
 
-        if (point.x - vehicleX + terrainVoxelSize / 2 < 0) indX--;
-        if (point.y - vehicleY + terrainVoxelSize / 2 < 0) indY--;
+        if (relX + terrainVoxelSize / 2 < 0) indX--;
+        if (relY + terrainVoxelSize / 2 < 0) indY--;
 
         if (indX >= 0 && indX < terrainVoxelWidth && indY >= 0 && indY < terrainVoxelWidth) {
           terrainVoxelCloud[terrainVoxelWidth * indX + indY]->push_back(point);
@@ -338,10 +362,23 @@ int main(int argc, char** argv)
           int laserCloudDwzSize = laserCloudDwz->points.size();
           for (int i = 0; i < laserCloudDwzSize; i++) {
             point = laserCloudDwz->points[i];
-            float dis = sqrt((point.x - vehicleX) * (point.x - vehicleX) 
-                      + (point.y - vehicleY) * (point.y - vehicleY));
-            if (point.z - vehicleZ > minRelZ - disRatioZ * dis &&
-                point.z - vehicleZ < maxRelZ + disRatioZ * dis &&
+
+            float dis;
+            float relZ;
+            if (frame == "GLOBAL"){
+              dis = sqrt((point.x - vehicleX) * (point.x - vehicleX) + (point.y - vehicleY) * (point.y - vehicleY));
+              relZ = point.z - vehicleZ;
+              // relY = pointY - vehicleY;
+            }
+
+            else if (frame == "LOCAL"){
+              dis = sqrt((point.x * point.x) + (point.y * point.y));
+              relZ = point.z;
+            }
+            
+            // float dis = sqrt((point.x - vehicleX) * (point.x - vehicleX + (point.y - vehicleY) * (point.y - vehicleY));
+            if (relZ > minRelZ - disRatioZ * dis &&
+                relZ < maxRelZ + disRatioZ * dis &&
                 (laserCloudTime - systemInitTime - point.intensity < decayTime || dis < noDecayDis) &&
                 !(dis < clearingDis && clearingCloud)) {
               terrainVoxelCloudPtr->push_back(point);
@@ -369,16 +406,31 @@ int main(int argc, char** argv)
       }
 
       int terrainCloudSize = terrainCloud->points.size();
+      
       for (int i = 0; i < terrainCloudSize; i++) {
         point = terrainCloud->points[i];
 
-        int indX = int((point.x - vehicleX + planarVoxelSize / 2) / planarVoxelSize) + planarVoxelHalfWidth;
-        int indY = int((point.y - vehicleY + planarVoxelSize / 2) / planarVoxelSize) + planarVoxelHalfWidth;
+        float relX,relY,relZ;
+        if (frame == "GLOBAL"){
+          // dis = sqrt((pointX - vehicleX) * (pointX - vehicleX) + (pointY - vehicleY) * (pointY - vehicleY));
+          relX = point.x - vehicleX;
+          relY = point.y - vehicleY;
+          relZ = point.z - vehicleZ;
+        }
 
-        if (point.x - vehicleX + planarVoxelSize / 2 < 0) indX--;
-        if (point.y - vehicleY + planarVoxelSize / 2 < 0) indY--;
+        else if (frame == "LOCAL"){
+          relX = point.x;
+          relY = point.y;
+          relZ - point.z;
+        }
 
-        if (point.z - vehicleZ > minRelZ && point.z - vehicleZ < maxRelZ) {
+        int indX = int((relX + planarVoxelSize / 2) / planarVoxelSize) + planarVoxelHalfWidth;
+        int indY = int((relY + planarVoxelSize / 2) / planarVoxelSize) + planarVoxelHalfWidth;
+
+        if (relX + planarVoxelSize / 2 < 0) indX--;
+        if (relY + planarVoxelSize / 2 < 0) indY--;
+
+        if (relZ > minRelZ && relZ < maxRelZ) {
           for (int dX = -1; dX <= 1; dX++) {
             for (int dY = -1; dY <= 1; dY++) {
               if (indX + dX >= 0 && indX + dX < planarVoxelWidth && indY + dY >= 0 && indY + dY < planarVoxelWidth) {
@@ -390,28 +442,54 @@ int main(int argc, char** argv)
 
         if (clearDyObs) {
           if (indX >= 0 && indX < planarVoxelWidth && indY >= 0 && indY < planarVoxelWidth) {
+
+            if (frame == "GLOBAL"){
             float pointX1 = point.x - vehicleX;
             float pointY1 = point.y - vehicleY;
             float pointZ1 = point.z - vehicleZ;
+
+              float dis1 = sqrt(pointX1 * pointX1 + pointY1 * pointY1);
+              if (dis1 > minDyObsDis) {
+                float angle1 = atan2(pointZ1 - minDyObsRelZ, dis1) * 180.0 / PI;
+                if (angle1 > minDyObsAngle) {
+                 float pointX2 = pointX1 * cosVehicleYaw + pointY1 * sinVehicleYaw;
+                 float pointY2 = -pointX1 * sinVehicleYaw + pointY1 * cosVehicleYaw;
+                 float pointZ2 = pointZ1;
+
+                 float pointX3 = pointX2 * cosVehiclePitch - pointZ2 * sinVehiclePitch;
+                 float pointY3 = pointY2;
+                 float pointZ3 = pointX2 * sinVehiclePitch + pointZ2 * cosVehiclePitch;
+
+                 float pointX4 = pointX3;
+                 float pointY4 = pointY3 * cosVehicleRoll + pointZ3 * sinVehicleRoll;
+                 float pointZ4 = -pointY3 * sinVehicleRoll + pointZ3 * cosVehicleRoll;
+
+                 float dis4 = sqrt(pointX4 * pointX4 + pointY4 * pointY4);
+                 float angle4 = atan2(pointZ4, dis4) * 180.0 / PI;
+                 if (angle4 > minDyObsVFOV && angle4 < maxDyObsVFOV) {
+                   planarVoxelDyObs[planarVoxelWidth * indX + indY]++;
+                  }
+                }
+              } else {
+              planarVoxelDyObs[planarVoxelWidth * indX + indY] += minDyObsPointNum;
+              }
+            }
+
+            if (frame == "LOCAL"){
+            float pointX1 = point.x;
+            float pointY1 = point.y;
+            float pointZ1 = point.z;
 
             float dis1 = sqrt(pointX1 * pointX1 + pointY1 * pointY1);
             if (dis1 > minDyObsDis) {
               float angle1 = atan2(pointZ1 - minDyObsRelZ, dis1) * 180.0 / PI;
               if (angle1 > minDyObsAngle) {
-                float pointX2 = pointX1 * cosVehicleYaw + pointY1 * sinVehicleYaw;
-                float pointY2 = -pointX1 * sinVehicleYaw + pointY1 * cosVehicleYaw;
+                float pointX2 = pointX1;
+                float pointY2 = pointY1;
                 float pointZ2 = pointZ1;
 
-                float pointX3 = pointX2 * cosVehiclePitch - pointZ2 * sinVehiclePitch;
-                float pointY3 = pointY2;
-                float pointZ3 = pointX2 * sinVehiclePitch + pointZ2 * cosVehiclePitch;
-
-                float pointX4 = pointX3;
-                float pointY4 = pointY3 * cosVehicleRoll + pointZ3 * sinVehicleRoll;
-                float pointZ4 = -pointY3 * sinVehicleRoll + pointZ3 * cosVehicleRoll;
-
-                float dis4 = sqrt(pointX4 * pointX4 + pointY4 * pointY4);
-                float angle4 = atan2(pointZ4, dis4) * 180.0 / PI;
+                float dis4 = sqrt(pointX2 * pointX2 + pointY2 * pointY2);
+                float angle4 = atan2(pointZ2, dis4) * 180.0 / PI;
                 if (angle4 > minDyObsVFOV && angle4 < maxDyObsVFOV) {
                   planarVoxelDyObs[planarVoxelWidth * indX + indY]++;
                 }
@@ -420,23 +498,48 @@ int main(int argc, char** argv)
               planarVoxelDyObs[planarVoxelWidth * indX + indY] += minDyObsPointNum;
             }
           }
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          }
         }
       }
 
       if (clearDyObs) {
+        
         for (int i = 0; i < laserCloudCropSize; i++) {
           point = laserCloudCrop->points[i];
+          float relX,relY,relZ;
+          if (frame == "GLOBAL"){
+          // dis = sqrt((pointX - vehicleX) * (pointX - vehicleX) + (pointY - vehicleY) * (pointY - vehicleY));
+            relX = point.x - vehicleX;
+            relY = point.y - vehicleY;
+            relZ = point.z - vehicleZ;
+          }
 
-          int indX = int((point.x - vehicleX + planarVoxelSize / 2) / planarVoxelSize) + planarVoxelHalfWidth;
-          int indY = int((point.y - vehicleY + planarVoxelSize / 2) / planarVoxelSize) + planarVoxelHalfWidth;
+          else if (frame == "LOCAL"){
+            relX = point.x;
+            relY = point.y;
+            relZ - point.z;
+          }
 
-          if (point.x - vehicleX + planarVoxelSize / 2 < 0) indX--;
-          if (point.y - vehicleY + planarVoxelSize / 2 < 0) indY--;
+          int indX = int((relX + planarVoxelSize / 2) / planarVoxelSize) + planarVoxelHalfWidth;
+          int indY = int((relY + planarVoxelSize / 2) / planarVoxelSize) + planarVoxelHalfWidth;
+
+          if (relX + planarVoxelSize / 2 < 0) indX--;
+          if (relY + planarVoxelSize / 2 < 0) indY--;
 
           if (indX >= 0 && indX < planarVoxelWidth && indY >= 0 && indY < planarVoxelWidth) {
-            float pointX1 = point.x - vehicleX;
-            float pointY1 = point.y - vehicleY;
-            float pointZ1 = point.z - vehicleZ;
+            float pointX1 = relX;
+            float pointY1 = relY;
+            float pointZ1 = relZ;
 
             float dis1 = sqrt(pointX1 * pointX1 + pointY1 * pointY1);
             float angle1 = atan2(pointZ1 - minDyObsRelZ, dis1) * 180.0 / PI;
@@ -486,14 +589,29 @@ int main(int argc, char** argv)
 
       terrainCloudElev->clear();
       int terrainCloudElevSize = 0;
+      
       for (int i = 0; i < terrainCloudSize; i++) {
         point = terrainCloud->points[i];
-        if (point.z - vehicleZ > minRelZ && point.z - vehicleZ < maxRelZ) {
-          int indX = int((point.x - vehicleX + planarVoxelSize / 2) / planarVoxelSize) + planarVoxelHalfWidth;
-          int indY = int((point.y - vehicleY + planarVoxelSize / 2) / planarVoxelSize) + planarVoxelHalfWidth;
+        float relX,relY,relZ;
+        if (frame == "GLOBAL"){
+          // dis = sqrt((pointX - vehicleX) * (pointX - vehicleX) + (pointY - vehicleY) * (pointY - vehicleY));
+          relX = point.x - vehicleX;
+          relY = point.y - vehicleY;
+          relZ = point.z - vehicleZ;
+        }
 
-          if (point.x - vehicleX + planarVoxelSize / 2 < 0) indX--;
-          if (point.y - vehicleY + planarVoxelSize / 2 < 0) indY--;
+        else if (frame == "LOCAL"){
+          relX = point.x;
+          relY = point.y;
+          relZ - point.z;
+        }
+        
+        if (relZ > minRelZ && relZ < maxRelZ) {
+          int indX = int((relX + planarVoxelSize / 2) / planarVoxelSize) + planarVoxelHalfWidth;
+          int indY = int((relY + planarVoxelSize / 2) / planarVoxelSize) + planarVoxelHalfWidth;
+
+          if (relX + planarVoxelSize / 2 < 0) indX--;
+          if (relY + planarVoxelSize / 2 < 0) indY--;
 
           if (indX >= 0 && indX < planarVoxelWidth && indY >= 0 && indY < planarVoxelWidth) {
             if (planarVoxelDyObs[planarVoxelWidth * indX + indY] < minDyObsPointNum || !clearDyObs) {
@@ -544,7 +662,7 @@ int main(int argc, char** argv)
           if (planarVoxelEdge[i] > noDataBlockSkipNum) {
             int indX = int(i / planarVoxelWidth);
             int indY = i % planarVoxelWidth;
-
+               
             point.x = planarVoxelSize * (indX - planarVoxelHalfWidth) + vehicleX;
             point.y = planarVoxelSize * (indY - planarVoxelHalfWidth) + vehicleY;
             point.z = vehicleZ;
